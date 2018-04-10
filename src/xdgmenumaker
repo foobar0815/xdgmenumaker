@@ -243,6 +243,8 @@ def main(argv):
         compizboxmenu()
     elif desktop == "twm":
         twm()
+    elif desktop == "openbox":
+        openbox()
     else:
         usage()
         sys.exit(2)
@@ -304,7 +306,7 @@ def icon_full_path(icon):
     if os.path.exists(icon):
         if ext == ".svg" or ext == ".svgz":
             # only jwm supports svg icons
-            if desktop == "jwm" and not nosvg:
+            if (desktop == "jwm" or desktop == "openbox") and not nosvg:
                 return icon
         else:
             # icon is not svg
@@ -317,7 +319,7 @@ def icon_full_path(icon):
     icon_theme = gtk.icon_theme_get_default()
     try:
         # JWM supports svg icons
-        if desktop == "jwm" and not nosvg:
+        if (desktop == "jwm" or desktop == "openbox") and not nosvg:
             icon = icon_theme.lookup_icon(icon, iconsize, gtk.ICON_LOOKUP_FORCE_SVG)
         # but none of the other WMs does
         else:
@@ -869,6 +871,41 @@ def twm():
             else:
                 print('    "{n}" f.exec "{c} &"'.format(n=name, c=command))
         print("}")
+
+def openbox():
+    print('<?xml version="1.0" encoding="UTF-8"?>')
+    print('<openbox_pipe_menu>')
+    spacing = '  '
+    for menu_category in menu():
+        category = menu_category.category
+        cat_name = category.decode()
+        cat_id = 'apps-{}-menu'.format(cat_name.lower())
+        cat_icon = category_icon(category)
+        cat_icon = icon_full_path(cat_icon)
+        if seticon and cat_icon is not None:
+            print('{s}<menu id="{d}" label="{c}" icon="{i}">'
+                  .format(s=spacing, d=cat_id, c=cat_name, i=cat_icon))
+        else:
+            print('{s}<menu id="{d}" label="{c}">'
+                  .format(s=spacing, d=cat_id, c=cat_name))
+
+        for app in menu_category.applist:
+            name = app.name.decode()
+            command = app.command
+            icon = app.icon
+            if seticon and icon is not None:
+                print('{s}  <item label="{n}" icon="{i}">'
+                      .format(s=spacing, n=name, i=icon))
+            else:
+                print('{s}  <item label="{n}">'
+                      .format(s=spacing, n=name))
+            print('{}    <action name="Execute">'.format(spacing))
+            print('{s}      <command>{c}</command>'.format(s=spacing,
+                                                           c=command))
+            print('{}    </action>'.format(spacing))
+            print('{}  </item>'.format(spacing))
+        print('{}</menu>'.format(spacing))
+    print('</openbox_pipe_menu>')
 
 if __name__ == "__main__":
     main(sys.argv[1:])
